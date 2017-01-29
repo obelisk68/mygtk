@@ -3,14 +3,16 @@ require 'gtk2'
 
 module MyGtk
   W = Gtk::Window.new
-  class Tool
+  class Tool < Gtk::Window
     def initialize
+      @window = W
       @drawable = W.window
       @gc = Gdk::GC.new(@drawable)
       @colormap = Gdk::Colormap.system
       @color = Gdk::Color.new(0, 0, 0)
       @fontdesc = Pango::FontDescription.new
     end
+    attr_reader :window
     
     def color(r, g, b)
       @color = Gdk::Color.new(r, g, b)
@@ -61,6 +63,7 @@ module MyGtk
       @color = color if color
       @gc.set_foreground(@color)
     end
+    private :set_color
     
     def load_pic(filename)
       GdkPixbuf::Pixbuf.new(file: filename)
@@ -95,9 +98,27 @@ module MyGtk
     def key_in(&bk)
       W.signal_connect("key_press_event", &bk)
     end
+    
+    def mouse_button(&bk)
+      W.add_events(Gdk::Event::BUTTON_PRESS_MASK)
+      W.signal_connect("button_press_event", &bk)
+    end
+    
+    def make_window(&bk)
+      w = Gtk::Window.new
+      w.instance_eval(&bk)
+      w.show_all
+      w
+    end
+    
+    def button(&bk)
+      b = Gtk::Button.new
+      b.instance_eval(&bk)
+      b
+    end
   end
   
-  def self.app(width: 300, height: 300, title: "gtk", &bk)
+  def self.app(width: 300, height: 300, title: "oekaki", &bk)
     W.title = title
     W.set_size_request(width, height)
     W.set_app_paintable(true)
@@ -105,6 +126,7 @@ module MyGtk
     
     Event.new.instance_eval(&bk)
     
+    W.signal_connect("destroy") {Gtk.main_quit}
     W.show
     Gtk.main
   end
